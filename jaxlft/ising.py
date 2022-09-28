@@ -140,17 +140,9 @@ class Hypercube(Lattice):
 @chex.dataclass
 class IsingTheory:
     """Ising theory after Hubbard-Stratonovich transformation."""
-    def __init__(self, L: chex.Scalar, T: chex.Scalar, d: chex.Scalar = 2):
-        self.L = L
-        self.T = T
-        self.dim = d
-        self.shape = [L] ** d
-
-        K = Hypercube(L, d, 'periodic').Adj / T
-        w, v = scipy.linalg.eigh(K)    
-        offset = 0.1-w.min()
-        K += np.eye(w.size)*offset
-        self.Kinv = jnp.asarray(scipy.linalg.inv(K))
+    Kinv: jnp.ndarray
+    L: chex.Scalar
+    dim: chex.Scalar = 2
 
     @property
     def lattice_size(self):
@@ -170,9 +162,9 @@ class IsingTheory:
 
         # check whether x are a batch or a single sample
         if x.ndim == self.dim:
-            chex.assert_shape(x, self.shape)
+            chex.assert_shape(x, [self.L] * self.dim)
             return ising_action(x, self.Kinv)
         else:
-            chex.assert_shape(x[0], self.shape)
+            chex.assert_shape(x[0], [self.L] * self.dim)
             act = partial(ising_action, Kinv=self.Kinv)
             return jax.vmap(act)(x)
