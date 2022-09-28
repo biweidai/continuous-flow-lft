@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 from .util import cyclic_corr
 from functools import partial
+import math
 
 
 @partial(jax.jit, static_argnames=('average',))
