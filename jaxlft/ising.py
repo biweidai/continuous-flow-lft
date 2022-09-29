@@ -169,3 +169,44 @@ class IsingTheory:
             chex.assert_shape(x[0], [self.L] * self.dim)
             act = partial(ising_action, Kinv=self.Kinv)
             return jax.vmap(act)(x)
+
+
+@chex.dataclass
+class IsingTheory_T:
+    """Ising theory for different temperatures after Hubbard-Stratonovich transformation."""
+    Adj: jnp.ndarray
+    L: chex.Scalar
+    T: chex.Scalar = None
+    dim: chex.Scalar = 2
+
+    @property
+    def lattice_size(self):
+        return self.L ** self.dim
+
+    def action(self, x: jnp.ndarray, T: chex.Scalar = None) -> jnp.ndarray:
+        """Compute the Ising action.
+
+        Args:
+            x: Either a single field configuration of shape L^d or
+               a batch of those field configurations.
+
+        Returns:
+            Either a scalar value or a 1d array of actions for the
+            field configuration(s).
+        """
+        T = self.T if T is None else T
+
+        K = self.Adj / T
+        w, v = jnp.linalg.eigh(K)
+        offset = 0.1-jnp.min(w)
+        K += jnp.eye(w.size)*offset
+        Kinv = jnp.linalg.inv(K)
+
+        # check whether x are a batch or a single sample
+        if x.ndim == self.dim:
+            chex.assert_shape(x, [self.L] * self.dim)
+            return ising_action(x, Kinv)
+        else:
+            chex.assert_shape(x[0], [self.L] * self.dim)
+            act = partial(ising_action, Kinv=Kinv)
+            return jax.vmap(act)(x)
